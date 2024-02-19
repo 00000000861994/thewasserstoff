@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Proxy {
+    address public owner; // Address of the owner of the contract
+    mapping(bytes4 => address) public implementations; // Mapping of function selectors to implementation contract addresses
+
+    constructor() {
+        owner = msg.sender; // Set the owner of the contract to the deployer
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not the owner"); // Modifier to restrict access to only the owner
+        _;
+    }
+
+    // Function to set the implementation address for a specific function
+    function setImplementation(bytes4 _funcId, address _implementation) public onlyOwner {
+        implementations[_funcId] = _implementation; // Set the implementation address for the function
+    }
+
+    // Fallback function to delegate calls to the appropriate implementation contract
+    fallback() external payable {
+        address implementation = implementations[msg.sig]; // Get the implementation address for the function selector
+        require(implementation != address(0), "Implementation not found"); // Ensure the implementation address is valid
+
+        // Forward the call to the implementation contract using delegatecall
+        (bool success, ) = implementation.delegatecall(msg.data);
+        require(success, "Delegatecall failed"); // Ensure the delegatecall was successful
+    }
+
+    // Receive function to handle received Ether
+    receive() external payable {
+        // Handle received Ether here
+    }
+}
